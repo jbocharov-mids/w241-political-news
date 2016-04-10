@@ -25,7 +25,8 @@ perform_data_cleaning <- function (raw_data) {
     "Q19_4" = "agreement_huff_correctly_labeled",
     "Q18_6" = "agreement_huff_counter_labeled",
     "Q19_5" = "credibility_huff_correctly_labeled",
-    "Q18_7" = "credibility_huff_counter_labeled"
+    "Q18_7" = "credibility_huff_counter_labeled",
+    "Q26" = "age_block"
   ))
   
   likert <- levels(working_data$agreement_fox_correctly_labeled)
@@ -89,6 +90,9 @@ perform_data_cleaning <- function (raw_data) {
   
   working_data$treatment <- ifelse(is.na(working_data$agreement_fox_counter_labeled), 0, 1)
   
+  working_data$age_block <- ifelse(!(working_data$age_block %in% c("18-25", "26-34")),"35_and_older", levels(working_data$age_block)[working_data$age_block])
+  working_data$age_block <- factor(working_data$age_block, levels = c("18-25", "26-34","35_and_older"))
+  
   return(
     working_data[,c(
       "mTurkCode", 
@@ -98,7 +102,8 @@ perform_data_cleaning <- function (raw_data) {
       "agreement_fox", 
       "credibility_fox",
       "party",
-      "party_loyalty"
+      "party_loyalty",
+      "age_block"
     )]
   )
 }
