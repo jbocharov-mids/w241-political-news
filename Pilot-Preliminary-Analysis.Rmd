@@ -1,8 +1,33 @@
+---
+title: "Pilot Preliminary Analysis"
+author: "John Bocharov, Sho Ohota, Apekshit Sharma"
+date: "April 11, 2016"
+output: pdf_document
+---
+
+# Prerequisites
+
+Load the required libraries
+
+```{r, message=FALSE}
 library(lubridate)
 library(plyr)
 library(reshape2)
+```
 
+Load the data:
+
+```{r}
+setwd('~/datasci/W241/w241-political-news/')
 raw_data <- read.csv("241_Project__Pilot_mTurk.csv", na.strings='')
+```
+
+
+# Data Cleaning
+
+The most interesting decision is which observations to keep. We keep only people who took > 100 seconds to complete the survey, as an indicator of actual well-considered responses.
+
+```{r}
 
 perform_data_cleaning <- function (raw_data) {
   
@@ -26,8 +51,7 @@ perform_data_cleaning <- function (raw_data) {
     "Q19_4" = "agreement_huff_correctly_labeled",
     "Q18_6" = "agreement_huff_counter_labeled",
     "Q19_5" = "credibility_huff_correctly_labeled",
-    "Q18_7" = "credibility_huff_counter_labeled",
-    "Q26" = "age_block"
+    "Q18_7" = "credibility_huff_counter_labeled"
   ))
   
   likert <- levels(working_data$agreement_fox_correctly_labeled)
@@ -91,9 +115,6 @@ perform_data_cleaning <- function (raw_data) {
   
   working_data$treatment <- ifelse(is.na(working_data$agreement_fox_counter_labeled), 0, 1)
   
-  working_data$age_block <- ifelse(!(working_data$age_block %in% c("18-25", "26-34")),"35_and_older", levels(working_data$age_block)[working_data$age_block])
-  working_data$age_block <- factor(working_data$age_block, levels = c("18-25", "26-34","35_and_older"))
-  
   return(
     working_data[,c(
       "mTurkCode", 
@@ -103,20 +124,55 @@ perform_data_cleaning <- function (raw_data) {
       "agreement_fox", 
       "credibility_fox",
       "party",
-      "party_loyalty",
-      "age_block"
+      "party_loyalty"
     )]
   )
 }
 
 clean_data <- perform_data_cleaning(raw_data)
+```
 
+Show a small sample of the resulting data:
 
+```{r}
+head(clean_data)
+```
+
+Some key model specifications (courtesy of Sho):
+
+```{r}
 summary(lm(as.numeric(agreement_fox) ~ party + party_loyalty + treatment, data=clean_data))
-summary(lm(as.numeric(credibility_fox) ~ party + party_loyalty + treatment, data=clean_data))
-summary(lm(as.numeric(agreement_huff) ~ party + party_loyalty + treatment, data=clean_data))
-summary(lm(as.numeric(credibility_huff) ~ party + party_loyalty + treatment, data=clean_data))
 
+summary(lm(as.numeric(credibility_fox) ~ party + party_loyalty + treatment, data=clean_data))
+
+summary(lm(as.numeric(agreement_huff) ~ party + party_loyalty + treatment, data=clean_data))
+
+summary(lm(as.numeric(credibility_huff) ~ party + party_loyalty + treatment, data=clean_data))
+```
+
+# AP Score imputation
+
+First we'll need a utility function to calculate the label from a source vector and a treatment assignment vector.
+
+```{r}
+compute_label <- function(source, treatment) {
+  counter_source <- ifelse(source == "Huff", "Fox", "Huff")
+  return(factor(
+    ifelse(
+      treatment == 1, 
+      counter_source, 
+      as.character(source))
+  ))
+}
+```
+
+Since we did not ask the AP question directly in the pilot, impute AP as halfway between the Fox and HuffPo scores. 
+
+Then we measure the difference between the score of each source (Fox, HuffPo) against the imputed AP rating as the lift for that source.
+
+Let's look at the imputed agreement ratings.
+
+```{r}
 impute_agreement <- function(clean_data) {
   mTurkCode <- clean_data$mTurkCode
   treatment <- clean_data$treatment
@@ -133,21 +189,63 @@ impute_agreement <- function(clean_data) {
     party = party,
     party_loyalty = party_loyalty,
     imputed_ap = imputed_agreement_ap,
-    fox = agreement_fox - imputed_agreement_ap,
-    huff = agreement_huff - imputed_agreement_ap
+    Fox = agreement_fox - imputed_agreement_ap,
+    Huff = agreement_huff - imputed_agreement_ap
   )
   
   return(melt( 
     imputed_agreement,
     id.vars = c("mTurkCode", "treatment", "party", "party_loyalty", "imputed_ap"),
-    measure.vars = c("fox", "huff"),
+    measure.vars = c("Fox", "Huff"),
     variable.name = "source",
     value.name = "lift"
   ))
 }
 
 imputed_agreement <- impute_agreement(clean_data)
+imputed_agreement$label <- compute_label(imputed_agreement$source, imputed_agreement$treatment)
 
+head(imputed_agreement)
+```
+
+## Agreement Model specifications
+
+The first interesting spec is the lift by source and party
+
+```{r}
+summary(lm( lift ~ source + party + source:party, data = imputed_agreement ))
+```
+
+Strange conclusions:
+
+(a) HuffPo is significantly more agreed with, and
+(b) especially by Republicans (very counter-intuitive)
+
+Then we add the label to the regression
+
+```{r}
+summary(lm( lift ~ source + party + source:party + label, data = imputed_agreement ))
+```
+
+With a p-value of 0.40, nowhere near significance. Then we add the label:source interaction:
+
+```{r}
+summary(lm( lift ~ source + party + source:party + label + label:source, data = imputed_agreement ))
+```
+
+And finally the label:source:party interaction:
+
+```{r}
+summary(lm( lift ~ source + party + source:party + label + label:source:party, data = imputed_agreement ))
+```
+
+
+
+## Imputed Credibility
+
+Then we also impute the credibility:
+
+```{r}
 impute_credibility <- function(clean_data) {
   mTurkCode <- clean_data$mTurkCode
   treatment <- clean_data$treatment
@@ -163,29 +261,51 @@ impute_credibility <- function(clean_data) {
     treatment = treatment,
     party = party,
     party_loyalty = party_loyalty,
-    imputed_ap = imputed_agreement_ap,
-    fox = credibility_fox - imputed_credibility_ap,
-    huff = credibility_huff - imputed_credibility_ap
+    imputed_ap = imputed_credibility_ap,
+    Fox = credibility_fox - imputed_credibility_ap,
+    Huff = credibility_huff - imputed_credibility_ap
   )
   
   return(melt( 
     imputed_credibility,
     id.vars = c("mTurkCode", "treatment", "party", "party_loyalty", "imputed_ap"),
-    measure.vars = c("fox", "huff"),
+    measure.vars = c("Fox", "Huff"),
     variable.name = "source",
     value.name = "lift"
   ))
 }
 
 imputed_credibility <- impute_credibility(clean_data)
+imputed_credibility$label <- compute_label(imputed_credibility$source, imputed_credibility$treatment)
 
-# The model specs we care about:
+head(imputed_credibility)
+```
 
-summary(lm( lift ~ source + party + source:party, data = imputed_agreement ))
+First spec, lift by source and party:
 
-summary(lm( lift ~ source + party + source:party + treatment + treatment:party, data = imputed_agreement ))
-
+```{r}
 summary(lm( lift ~ source + party + source:party, data = imputed_credibility ))
+```
 
-summary(lm( lift ~ source + party + source:party + treatment + treatment:party, data = imputed_credibility ))
+Again, strange conclusions:
 
+(a) Republicans more likely to give credibility to the source
+(b) especially by HuffPo (very counter-intuitive)
+
+Then we add the label to the regression
+
+```{r}
+summary(lm( lift ~ source + party + source:party + label, data = imputed_credibility ))
+```
+
+With a p-value of 0.23, still not significant. Then we add the label:source interaction:
+
+```{r}
+summary(lm( lift ~ source + party + source:party + label + label:source, data = imputed_credibility ))
+```
+
+And finally the label:source:party interaction:
+
+```{r}
+summary(lm( lift ~ source + party + source:party + label + label:source:party, data = imputed_credibility ))
+```
