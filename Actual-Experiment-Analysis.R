@@ -145,3 +145,15 @@ summary(lm((as.numeric(agreement_ap) - as.numeric(agreement_fox))  ~ party + tre
 summary(lm((as.numeric(credibility_ap) - as.numeric(credibility_fox))  ~ party + treatment + party * treatment + q_order, data=clean_data))
 summary(lm((as.numeric(agreement_ap) - as.numeric(agreement_huff))  ~ party + treatment + party * treatment + q_order, data=clean_data))
 summary(lm((as.numeric(credibility_ap) - as.numeric(credibility_huff))  ~ party + treatment + party * treatment + q_order, data=clean_data))
+
+# John's specs
+clean_data$fox_agreement_lift <- as.numeric(clean_data$agreement_fox) - as.numeric(clean_data$agreement_ap)
+clean_data$fox_credibility_lift <- as.numeric(clean_data$credibility_fox) - as.numeric(clean_data$credibility_ap)
+clean_data$huff_agreement_lift <- as.numeric(clean_data$agreement_huff) - as.numeric(clean_data$agreement_ap)
+clean_data$huff_credibility_lift <- as.numeric(clean_data$credibility_huff) - as.numeric(clean_data$credibility_ap)
+
+
+summary(lm(fox_agreement_lift ~ party + treatment + party * treatment, data=clean_data))
+summary(lm(fox_credibility_lift ~ party + treatment + party * treatment, data=clean_data))
+summary(lm(huff_agreement_lift ~ party + treatment + party * treatment, data=clean_data))
+summary(lm(huff_credibility_lift ~ party + treatment + party * treatment, data=clean_data))
