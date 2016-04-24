@@ -141,7 +141,7 @@ perform_data_cleaning <- function (raw_data) {
 clean_data <- perform_data_cleaning(raw_data)
 
 
-summary(lm(as.numeric(agreement_fox) ~ party + party_loyalty + treatment, data=clean_data))
-summary(lm(as.numeric(credibility_fox) ~ party + party_loyalty + treatment, data=clean_data))
-summary(lm(as.numeric(agreement_huff) ~ party + party_loyalty + treatment, data=clean_data))
-summary(lm(as.numeric(credibility_huff) ~ party + party_loyalty + treatment, data=clean_data))
+summary(lm((as.numeric(agreement_ap) - as.numeric(agreement_fox))  ~ party + treatment + party * treatment + q_order, data=clean_data))
+summary(lm((as.numeric(credibility_ap) - as.numeric(credibility_fox))  ~ party + treatment + party * treatment + q_order, data=clean_data))
+summary(lm((as.numeric(agreement_ap) - as.numeric(agreement_huff))  ~ party + treatment + party * treatment + q_order, data=clean_data))
+summary(lm((as.numeric(credibility_ap) - as.numeric(credibility_huff))  ~ party + treatment + party * treatment + q_order, data=clean_data))
