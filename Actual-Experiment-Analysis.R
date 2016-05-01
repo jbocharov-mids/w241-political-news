@@ -86,12 +86,18 @@ perform_data_cleaning <- function (raw_data) {
     as.character(working_data$q_order_treatment)
   )
   
-  working_data$agreement_fox <- to_likert_factor(agreement_fox_raw)
-  working_data$credibility_fox <- to_likert_factor(credibility_fox_raw)
-  working_data$agreement_huff <- to_likert_factor(agreement_huff_raw)
-  working_data$credibility_huff <- to_likert_factor(credibility_huff_raw)
-  working_data$agreement_ap <- to_likert_factor(agreement_ap_raw)
-  working_data$credibility_ap <- to_likert_factor(credibility_ap_raw)
+  working_data$agreement_fox_factor <- to_likert_factor(agreement_fox_raw)
+  working_data$agreement_fox <- as.numeric(working_data$agreement_fox_factor)
+  working_data$credibility_fox_factor <- to_likert_factor(credibility_fox_raw)
+  working_data$credibility_fox <- as.numeric(working_data$credibility_fox_factor)
+  working_data$agreement_huff_factor <- to_likert_factor(agreement_huff_raw)
+  working_data$agreement_huff <- as.numeric(working_data$agreement_huff_factor)
+  working_data$credibility_huff_factor <- to_likert_factor(credibility_huff_raw)
+  working_data$credibility_huff <- as.numeric(working_data$credibility_huff_factor)
+  working_data$agreement_ap_factor <- to_likert_factor(agreement_ap_raw)
+  working_data$agreement_ap <- as.numeric(working_data$agreement_ap_factor)
+  working_data$credibility_ap_factor <- to_likert_factor(credibility_ap_raw)
+  working_data$credibility_ap <- as.numeric(working_data$credibility_ap_factor)
   
   working_data$q_order <- as.factor(ifelse(substring(q_order_raw,1,7) %in% c("Q45|Q20", "Q26|Q18"), "Fox", "Huff"))
   
@@ -109,6 +115,8 @@ perform_data_cleaning <- function (raw_data) {
   ] 
   
   working_data$party <- factor(party)
+  working_data$republican <- ifelse(working_data$party == 'Republican', 1, 0)
+  working_data$democrat <- ifelse(working_data$party == 'Democrat', 1, 0)
   
   party_loyalty <- working_data$raw_party_loyalty
   
@@ -125,13 +133,21 @@ perform_data_cleaning <- function (raw_data) {
       "mTurkCode", 
       "treatment",
       "agreement_ap",
+      "agreement_ap_factor",
       "credibility_ap",
+      "credibility_ap_factor",
       "agreement_huff", 
-      "credibility_huff", 
-      "agreement_fox", 
+      "agreement_huff_factor",
+      "credibility_huff",
+      "credibility_huff_factor",
+      "agreement_fox",
+      "agreement_fox_factor",
       "credibility_fox",
+      "credibility_fox_factor",
       "q_order",
       "party",
+      "republican",
+      "democrat",
       "party_loyalty",
       "age_block"
     )]
@@ -141,19 +157,35 @@ perform_data_cleaning <- function (raw_data) {
 clean_data <- perform_data_cleaning(raw_data)
 
 
-summary(lm((as.numeric(agreement_ap) - as.numeric(agreement_fox))  ~ party + treatment + party * treatment + q_order, data=clean_data))
-summary(lm((as.numeric(credibility_ap) - as.numeric(credibility_fox))  ~ party + treatment + party * treatment + q_order, data=clean_data))
-summary(lm((as.numeric(agreement_ap) - as.numeric(agreement_huff))  ~ party + treatment + party * treatment + q_order, data=clean_data))
-summary(lm((as.numeric(credibility_ap) - as.numeric(credibility_huff))  ~ party + treatment + party * treatment + q_order, data=clean_data))
+analyze_agreement_fox <- function() {
+  summary(lm( 
+    agreement_fox ~ agreement_ap + democrat + republican,
+    data = clean_data
+  ))
+}
 
-# John's specs
-clean_data$fox_agreement_lift <- as.numeric(clean_data$agreement_fox) - as.numeric(clean_data$agreement_ap)
-clean_data$fox_credibility_lift <- as.numeric(clean_data$credibility_fox) - as.numeric(clean_data$credibility_ap)
-clean_data$huff_agreement_lift <- as.numeric(clean_data$agreement_huff) - as.numeric(clean_data$agreement_ap)
-clean_data$huff_credibility_lift <- as.numeric(clean_data$credibility_huff) - as.numeric(clean_data$credibility_ap)
-
-
-summary(lm(fox_agreement_lift ~ party + treatment + party * treatment, data=clean_data))
-summary(lm(fox_credibility_lift ~ party + treatment + party * treatment, data=clean_data))
-summary(lm(huff_agreement_lift ~ party + treatment + party * treatment, data=clean_data))
-summary(lm(huff_credibility_lift ~ party + treatment + party * treatment, data=clean_data))
+unused_first_iteration_specs <- function () {
+  summary(lm((as.numeric(agreement_ap) - as.numeric(agreement_fox))  ~ party + treatment + party * treatment + q_order, data=clean_data))
+  summary(lm((as.numeric(credibility_ap) - as.numeric(credibility_fox))  ~ party + treatment + party * treatment + q_order, data=clean_data))
+  summary(lm((as.numeric(agreement_ap) - as.numeric(agreement_huff))  ~ party + treatment + party * treatment + q_order, data=clean_data))
+  summary(lm((as.numeric(credibility_ap) - as.numeric(credibility_huff))  ~ party + treatment + party * treatment + q_order, data=clean_data))
+  
+  # John's specs
+  clean_data$fox_agreement_lift <- as.numeric(clean_data$agreement_fox) - as.numeric(clean_data$agreement_ap)
+  clean_data$fox_credibility_lift <- as.numeric(clean_data$credibility_fox) - as.numeric(clean_data$credibility_ap)
+  clean_data$huff_agreement_lift <- as.numeric(clean_data$agreement_huff) - as.numeric(clean_data$agreement_ap)
+  clean_data$huff_credibility_lift <- as.numeric(clean_data$credibility_huff) - as.numeric(clean_data$credibility_ap)
+  
+  
+  summary(lm(fox_agreement_lift ~ party + treatment + party * treatment, data=clean_data))
+  summary(lm(fox_credibility_lift ~ party + treatment + party * treatment, data=clean_data))
+  summary(lm(huff_agreement_lift ~ party + treatment + party * treatment, data=clean_data))
+  summary(lm(huff_credibility_lift ~ party + treatment + party * treatment, data=clean_data))
+  
+  fa1 <- lm(fox_agreement_lift ~ party, data = clean_data)
+  fa2 <- lm(fox_agreement_lift ~ party + treatment, data = clean_data)
+  fa3 <- lm(fox_agreement_lift ~ party + treatment + party * treatment, data = clean_data)
+  fa4 <- lm(fox_agreement_lift ~ party + treatment + party * treatment + q_order, data = clean_data)
+  stargazer(fa1, fa2, fa3, fa4, type = "html",
+            dep.var.labels = "Agreement with Fox News article")
+}
