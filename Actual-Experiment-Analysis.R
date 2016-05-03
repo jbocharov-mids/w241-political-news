@@ -1,5 +1,7 @@
 library(lubridate)
 library(plyr)
+library(stargazer)
+library(lfe)  # For fixed effects
 
 raw_data <- read.csv("241_Project__Actual_Experiment.csv", na.strings='')
 
@@ -33,6 +35,9 @@ perform_data_cleaning <- function (raw_data) {
     "DO.BL.Treatment" = "q_order_treatment",
     "DO.BL.Control" = "q_order_control",
     "Q26" = "age_block",
+    "Q8" = "gender",
+    "Q12" = "state",
+    "Q9" = "education",
     "Q19_1" = "fox_familiar_raw",
     "Q19_2" = "huff_familiar_raw"
   ))
@@ -162,6 +167,9 @@ perform_data_cleaning <- function (raw_data) {
       "democrat",
       "party_loyalty",
       "age_block",
+      "gender",
+      "state",
+      "education",
       "fox_familiar",
       "huff_familiar"
     )]
@@ -171,7 +179,7 @@ perform_data_cleaning <- function (raw_data) {
 clean_data <- perform_data_cleaning(raw_data)
 
 
-analyze_agreement_fox <- function() {
+analyze_agreement_fox <- function(stargazer_output = "text") {
   
   # First specs are designed to confirm/disprove significance of
   # party, treatment or treament heterogeneity
@@ -201,7 +209,7 @@ analyze_agreement_fox <- function() {
     fa_party_treatment_model,
     fa_party_treatment_hg_model,
     fa_party_treatment_hg_qo_model,
-    type = "html",
+    type = stargazer_output,
     title = "Agreement with Fox News article (Heterogeity unproven)"
   )
   
@@ -222,7 +230,425 @@ analyze_agreement_fox <- function() {
     data = clean_data
   )
   
+  fa_hg_familiarity_gender_model <- lm( 
+    agreement_fox ~ agreement_ap + party + 
+      treatment:democrat + treatment:republican + q_order +
+      fox_familiar + huff_familiar + gender,
+    data = clean_data
+  )
+  
+  stargazer(
+    fa_hg_treatment_model,
+    fa_hg_q_order_model,
+    fa_hg_familiarity_model,
+    fa_hg_familiarity_gender_model,
+    type = stargazer_output,
+    title = "Agreement with Fox News article (Heterogeity assumed)",
+    order = c(1, 2, 8, 9, 3, 4, 5, 6, 7)
+  )
+  
+  # Same spec to suppress extra OLS vs felm output in stargazer
+  
+  fa_hg_felm_treatment_model <- felm(
+    agreement_fox ~ agreement_ap + party + treatment:democrat + treatment:republican,
+    data = clean_data
+  )
+  
+  fa_hg_education_model <- felm( 
+    agreement_fox ~ agreement_ap + party + 
+      treatment:democrat + treatment:republican + q_order +
+      fox_familiar + huff_familiar + gender 
+      | education, # fixed effects
+    data = clean_data
+  )
+  
+  fa_hg_education_state_model <- felm( 
+    agreement_fox ~ agreement_ap + party + 
+      treatment:democrat + treatment:republican + q_order +
+      fox_familiar + huff_familiar + gender 
+    | education + state, # fixed effects
+    data = clean_data
+  )
+  
+  fa_hg_education_state_age_model <- felm( 
+    agreement_fox ~ agreement_ap + party + 
+      treatment:democrat + treatment:republican + q_order +
+      fox_familiar + huff_familiar + gender 
+    | education + state + age_block, # fixed effects
+    data = clean_data
+  )
+  
+  stargazer(
+    fa_hg_felm_treatment_model,
+    fa_hg_education_model,
+    fa_hg_education_state_model,
+    fa_hg_education_state_age_model,
+    type = stargazer_output,
+    title = "Agreement with Fox News article (Heterogeity assumed)",
+    add.lines = list(
+      c("Education FE?", "No", "Yes", "Yes", "Yes"),
+      c("State FE?", "No", "No", "Yes", "Yes"),
+      c("Age Block FE?", "No", "No", "No", "Yes")
+    ),
+    order = c(1, 2, 8, 9, 3, 4, 5, 6, 7 )
+  )
+  
 }
+
+analyze_agreement_fox()
+
+analyze_credibility_fox <- function(stargazer_output = "text") {
+  
+  # First specs are designed to confirm/disprove significance of
+  # party, treatment or treament heterogeneity
+  
+  fc_party_only_model <- lm( 
+    credibility_fox ~ credibility_ap + party,
+    data = clean_data
+  )
+  
+  fc_party_treatment_model <- lm( 
+    credibility_fox ~ credibility_ap + party + treatment,
+    data = clean_data
+  )
+  
+  fc_party_treatment_hg_model <- lm( 
+    credibility_fox ~ credibility_ap + party + treatment + party:treatment,
+    data = clean_data
+  )
+  
+  fc_party_treatment_hg_qo_model <- lm( 
+    credibility_fox ~ credibility_ap + party + treatment + party:treatment + q_order,
+    data = clean_data
+  )
+  
+  stargazer(
+    fc_party_only_model,
+    fc_party_treatment_model,
+    fc_party_treatment_hg_model,
+    fc_party_treatment_hg_qo_model,
+    type = stargazer_output,
+    title = "Agreement with Fox News article (Heterogeity unproven)"
+  )
+  
+  fc_hg_treatment_model <- lm( 
+    credibility_fox ~ credibility_ap + party + treatment:democrat + treatment:republican,
+    data = clean_data
+  )
+  
+  fc_hg_q_order_model <- lm( 
+    credibility_fox ~ credibility_ap + party + treatment:democrat + treatment:republican + q_order,
+    data = clean_data
+  )
+  
+  fc_hg_familiarity_model <- lm( 
+    credibility_fox ~ credibility_ap + party + 
+      treatment:democrat + treatment:republican + q_order +
+      fox_familiar + huff_familiar,
+    data = clean_data
+  )
+  
+  fc_hg_familiarity_gender_model <- lm( 
+    credibility_fox ~ credibility_ap + party + 
+      treatment:democrat + treatment:republican + q_order +
+      fox_familiar + huff_familiar + gender,
+    data = clean_data
+  )
+  
+  stargazer(
+    fc_hg_treatment_model,
+    fc_hg_q_order_model,
+    fc_hg_familiarity_model,
+    fc_hg_familiarity_gender_model,
+    type = stargazer_output,
+    title = "Agreement with Fox News article (Heterogeity assumed)",
+    order = c(1, 2, 8, 9, 3, 4, 5, 6, 7)
+  )
+  
+  # Same spec to suppress extra OLS vs felm output in stargazer
+  
+  fc_hg_felm_treatment_model <- felm(
+    credibility_fox ~ credibility_ap + party + treatment:democrat + treatment:republican,
+    data = clean_data
+  )
+  
+  fc_hg_education_model <- felm( 
+    credibility_fox ~ credibility_ap + party + 
+      treatment:democrat + treatment:republican + q_order +
+      fox_familiar + huff_familiar + gender 
+    | education, # fixed effects
+    data = clean_data
+  )
+  
+  fc_hg_education_state_model <- felm( 
+    credibility_fox ~ credibility_ap + party + 
+      treatment:democrat + treatment:republican + q_order +
+      fox_familiar + huff_familiar + gender 
+    | education + state, # fixed effects
+    data = clean_data
+  )
+  
+  fc_hg_education_state_age_model <- felm( 
+    credibility_fox ~ credibility_ap + party + 
+      treatment:democrat + treatment:republican + q_order +
+      fox_familiar + huff_familiar + gender 
+    | education + state + age_block, # fixed effects
+    data = clean_data
+  )
+  
+  stargazer(
+    fc_hg_felm_treatment_model,
+    fc_hg_education_model,
+    fc_hg_education_state_model,
+    fc_hg_education_state_age_model,
+    type = stargazer_output,
+    title = "Agreement with Fox News article (Heterogeity assumed)",
+    add.lines = list(
+      c("Education FE?", "No", "Yes", "Yes", "Yes"),
+      c("State FE?", "No", "No", "Yes", "Yes"),
+      c("Age Block FE?", "No", "No", "No", "Yes")
+    ),
+    order = c(1, 2, 8, 9, 3, 4, 5, 6, 7 )
+  )
+  
+}
+analyze_credibility_fox()
+
+analyze_agreement_huff <- function(stargazer_output = "text") {
+  
+  # First specs are designed to confirm/disprove significance of
+  # party, treatment or treament heterogeneity
+  
+  ha_party_only_model <- lm( 
+    agreement_huff ~ agreement_ap + party,
+    data = clean_data
+  )
+  
+  ha_party_treatment_model <- lm( 
+    agreement_huff ~ agreement_ap + party + treatment,
+    data = clean_data
+  )
+  
+  ha_party_treatment_hg_model <- lm( 
+    agreement_huff ~ agreement_ap + party + treatment + party:treatment,
+    data = clean_data
+  )
+  
+  ha_party_treatment_hg_qo_model <- lm( 
+    agreement_huff ~ agreement_ap + party + treatment + party:treatment + q_order,
+    data = clean_data
+  )
+  
+  stargazer(
+    ha_party_only_model,
+    ha_party_treatment_model,
+    ha_party_treatment_hg_model,
+    ha_party_treatment_hg_qo_model,
+    type = stargazer_output,
+    title = "Agreement with Fox News article (Heterogeity unproven)"
+  )
+  
+  ha_hg_treatment_model <- lm( 
+    agreement_huff ~ agreement_ap + party + treatment:democrat + treatment:republican,
+    data = clean_data
+  )
+  
+  ha_hg_q_order_model <- lm( 
+    agreement_huff ~ agreement_ap + party + treatment:democrat + treatment:republican + q_order,
+    data = clean_data
+  )
+  
+  ha_hg_familiarity_model <- lm( 
+    agreement_huff ~ agreement_ap + party + 
+      treatment:democrat + treatment:republican + q_order +
+      fox_familiar + huff_familiar,
+    data = clean_data
+  )
+  
+  ha_hg_familiarity_gender_model <- lm( 
+    agreement_huff ~ agreement_ap + party + 
+      treatment:democrat + treatment:republican + q_order +
+      fox_familiar + huff_familiar + gender,
+    data = clean_data
+  )
+  
+  stargazer(
+    ha_hg_treatment_model,
+    ha_hg_q_order_model,
+    ha_hg_familiarity_model,
+    ha_hg_familiarity_gender_model,
+    type = stargazer_output,
+    title = "Agreement with Fox News article (Heterogeity assumed)",
+    order = c(1, 2, 8, 9, 3, 4, 5, 6, 7)
+  )
+  
+  # Same spec to suppress extra OLS vs felm output in stargazer
+  
+  ha_hg_felm_treatment_model <- felm(
+    agreement_huff ~ agreement_ap + party + treatment:democrat + treatment:republican,
+    data = clean_data
+  )
+  
+  ha_hg_education_model <- felm( 
+    agreement_huff ~ agreement_ap + party + 
+      treatment:democrat + treatment:republican + q_order +
+      fox_familiar + huff_familiar + gender 
+    | education, # fixed effects
+    data = clean_data
+  )
+  
+  ha_hg_education_state_model <- felm( 
+    agreement_huff ~ agreement_ap + party + 
+      treatment:democrat + treatment:republican + q_order +
+      fox_familiar + huff_familiar + gender 
+    | education + state, # fixed effects
+    data = clean_data
+  )
+  
+  ha_hg_education_state_age_model <- felm( 
+    agreement_huff ~ agreement_ap + party + 
+      treatment:democrat + treatment:republican + q_order +
+      fox_familiar + huff_familiar + gender 
+    | education + state + age_block, # fixed effects
+    data = clean_data
+  )
+  
+  stargazer(
+    ha_hg_felm_treatment_model,
+    ha_hg_education_model,
+    ha_hg_education_state_model,
+    ha_hg_education_state_age_model,
+    type = stargazer_output,
+    title = "Agreement with Fox News article (Heterogeity assumed)",
+    add.lines = list(
+      c("Education FE?", "No", "Yes", "Yes", "Yes"),
+      c("State FE?", "No", "No", "Yes", "Yes"),
+      c("Age Block FE?", "No", "No", "No", "Yes")
+    ),
+    order = c(1, 2, 8, 9, 3, 4, 5, 6, 7 )
+  )
+  
+}
+
+analyze_agreement_huff()
+
+analyze_credibility_huff <- function(stargazer_output = "text") {
+  
+  # First specs are designed to confirm/disprove significance of
+  # party, treatment or treament heterogeneity
+  
+  hc_party_only_model <- lm( 
+    credibility_huff ~ agreement_ap + party,
+    data = clean_data
+  )
+  
+  hc_party_treatment_model <- lm( 
+    credibility_huff ~ credibility_ap + party + treatment,
+    data = clean_data
+  )
+  
+  hc_party_treatment_hg_model <- lm( 
+    credibility_huff ~ credibility_ap + party + treatment + party:treatment,
+    data = clean_data
+  )
+  
+  hc_party_treatment_hg_qo_model <- lm( 
+    credibility_huff ~ credibility_ap + party + treatment + party:treatment + q_order,
+    data = clean_data
+  )
+  
+  stargazer(
+    hc_party_only_model,
+    hc_party_treatment_model,
+    hc_party_treatment_hg_model,
+    hc_party_treatment_hg_qo_model,
+    type = stargazer_output,
+    title = "Agreement with Fox News article (Heterogeity unproven)"
+  )
+  
+  hc_hg_treatment_model <- lm( 
+    credibility_huff ~ credibility_ap + party + treatment:democrat + treatment:republican,
+    data = clean_data
+  )
+  
+  hc_hg_q_order_model <- lm( 
+    credibility_huff ~ credibility_ap + party + treatment:democrat + treatment:republican + q_order,
+    data = clean_data
+  )
+  
+  hc_hg_familiarity_model <- lm( 
+    credibility_huff ~ credibility_ap + party + 
+      treatment:democrat + treatment:republican + q_order +
+      fox_familiar + huff_familiar,
+    data = clean_data
+  )
+  
+  hc_hg_familiarity_gender_model <- lm( 
+    credibility_huff ~ credibility_ap + party + 
+      treatment:democrat + treatment:republican + q_order +
+      fox_familiar + huff_familiar + gender,
+    data = clean_data
+  )
+  
+  stargazer(
+    hc_hg_treatment_model,
+    hc_hg_q_order_model,
+    hc_hg_familiarity_model,
+    hc_hg_familiarity_gender_model,
+    type = stargazer_output,
+    title = "Agreement with Fox News article (Heterogeity assumed)",
+    order = c(1, 2, 8, 9, 3, 4, 5, 6, 7)
+  )
+  
+  # Same spec to suppress extra OLS vs felm output in stargazer
+  
+  hc_hg_felm_treatment_model <- felm(
+    credibility_huff ~ credibility_ap + party + treatment:democrat + treatment:republican,
+    data = clean_data
+  )
+  
+  hc_hg_education_model <- felm( 
+    credibility_huff ~ credibility_ap + party + 
+      treatment:democrat + treatment:republican + q_order +
+      fox_familiar + huff_familiar + gender 
+    | education, # fixed effects
+    data = clean_data
+  )
+  
+  hc_hg_education_state_model <- felm( 
+    credibility_huff ~ credibility_ap + party + 
+      treatment:democrat + treatment:republican + q_order +
+      fox_familiar + huff_familiar + gender 
+    | education + state, # fixed effects
+    data = clean_data
+  )
+  
+  hc_hg_education_state_age_model <- felm( 
+    credibility_huff ~ credibility_ap + party + 
+      treatment:democrat + treatment:republican + q_order +
+      fox_familiar + huff_familiar + gender 
+    | education + state + age_block, # fixed effects
+    data = clean_data
+  )
+  
+  stargazer(
+    hc_hg_felm_treatment_model,
+    hc_hg_education_model,
+    hc_hg_education_state_model,
+    hc_hg_education_state_age_model,
+    type = stargazer_output,
+    title = "Agreement with Fox News article (Heterogeity assumed)",
+    add.lines = list(
+      c("Education FE?", "No", "Yes", "Yes", "Yes"),
+      c("State FE?", "No", "No", "Yes", "Yes"),
+      c("Age Block FE?", "No", "No", "No", "Yes")
+    ),
+    order = c(1, 2, 8, 9, 3, 4, 5, 6, 7 )
+  )
+  
+}
+
+analyze_credibility_huff()
 
 unused_first_iteration_specs <- function () {
   summary(lm((as.numeric(agreement_ap) - as.numeric(agreement_fox))  ~ party + treatment + party * treatment + q_order, data=clean_data))
