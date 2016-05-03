@@ -32,7 +32,9 @@ perform_data_cleaning <- function (raw_data) {
     "Q26_9" = "credibility_AP_control",
     "DO.BL.Treatment" = "q_order_treatment",
     "DO.BL.Control" = "q_order_control",
-    "Q26" = "age_block"
+    "Q26" = "age_block",
+    "Q19_1" = "fox_familiar_raw",
+    "Q19_2" = "huff_familiar_raw"
   ))
   
   likert <- levels(working_data$agreement_fox_correctly_labeled)
@@ -128,6 +130,16 @@ perform_data_cleaning <- function (raw_data) {
   working_data$age_block <- ifelse(!(working_data$age_block %in% c("18-25", "26-34")),"35_and_older", levels(working_data$age_block)[working_data$age_block])
   working_data$age_block <- factor(working_data$age_block, levels = c("18-25", "26-34","35_and_older"))
   
+  # Recode familiarity with articles
+  familiar_levels <- c("Not familiar at all", "Slightly familiar", "Moderately familiar", "Very familiar", "Extremely familiar")
+  convert_familiar_likert_to_numeric <- function (familiarity) {
+    as_factor = factor(familiarity, levels=familiar_levels)
+    # We just need values, get rid of labels.
+    return (as.numeric(as_factor))
+  }
+  working_data$fox_familiar <- convert_familiar_likert_to_numeric(working_data$fox_familiar_raw)
+  working_data$huff_familiar <- convert_familiar_likert_to_numeric(working_data$huff_familiar_raw)
+  
   return(
     working_data[,c(
       "mTurkCode", 
@@ -149,7 +161,9 @@ perform_data_cleaning <- function (raw_data) {
       "republican",
       "democrat",
       "party_loyalty",
-      "age_block"
+      "age_block",
+      "fox_familiar",
+      "huff_familiar"
     )]
   )
 }
@@ -158,10 +172,56 @@ clean_data <- perform_data_cleaning(raw_data)
 
 
 analyze_agreement_fox <- function() {
-  summary(lm( 
-    agreement_fox ~ agreement_ap + democrat + republican,
+  
+  # First specs are designed to confirm/disprove significance of
+  # party, treatment or treament heterogeneity
+  
+  fa_party_only_model <- lm( 
+    agreement_fox ~ agreement_ap + party,
     data = clean_data
-  ))
+  )
+  
+  fa_party_treatment_model <- lm( 
+    agreement_fox ~ agreement_ap + party + treatment,
+    data = clean_data
+  )
+  
+  fa_party_treatment_hg_model <- lm( 
+    agreement_fox ~ agreement_ap + party + treatment + party:treatment,
+    data = clean_data
+  )
+  
+  fa_party_treatment_hg_qo_model <- lm( 
+    agreement_fox ~ agreement_ap + party + treatment + party:treatment + q_order,
+    data = clean_data
+  )
+  
+  stargazer(
+    fa_party_only_model,
+    fa_party_treatment_model,
+    fa_party_treatment_hg_model,
+    fa_party_treatment_hg_qo_model,
+    type = "html",
+    title = "Agreement with Fox News article (Heterogeity unproven)"
+  )
+  
+  fa_hg_treatment_model <- lm( 
+    agreement_fox ~ agreement_ap + party + treatment:democrat + treatment:republican,
+    data = clean_data
+  )
+  
+  fa_hg_q_order_model <- lm( 
+    agreement_fox ~ agreement_ap + party + treatment:democrat + treatment:republican + q_order,
+    data = clean_data
+  )
+  
+  fa_hg_familiarity_model <- lm( 
+    agreement_fox ~ agreement_ap + party + 
+      treatment:democrat + treatment:republican + q_order +
+      fox_familiar + huff_familiar,
+    data = clean_data
+  )
+  
 }
 
 unused_first_iteration_specs <- function () {
