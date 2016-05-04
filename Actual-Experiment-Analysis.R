@@ -328,7 +328,7 @@ analyze_credibility_fox <- function(stargazer_output = "text") {
     fc_party_treatment_hg_model,
     fc_party_treatment_hg_qo_model,
     type = stargazer_output,
-    title = "Agreement with Fox News article (Heterogeity unproven)"
+    title = "Credibility of Fox News article (Heterogeity unproven)"
   )
   
   fc_hg_treatment_model <- lm( 
@@ -445,7 +445,7 @@ analyze_agreement_huff <- function(stargazer_output = "text") {
     ha_party_treatment_hg_model,
     ha_party_treatment_hg_qo_model,
     type = stargazer_output,
-    title = "Agreement with Fox News article (Heterogeity unproven)"
+    title = "Agreement with HuffPo article (Heterogeity unproven)"
   )
   
   ha_hg_treatment_model <- lm( 
@@ -478,7 +478,7 @@ analyze_agreement_huff <- function(stargazer_output = "text") {
     ha_hg_familiarity_model,
     ha_hg_familiarity_gender_model,
     type = stargazer_output,
-    title = "Agreement with Fox News article (Heterogeity assumed)",
+    title = "Agreement with HuffPo article (Heterogeity assumed)",
     order = c(1, 2, 8, 9, 3, 4, 5, 6, 7)
   )
   
@@ -519,7 +519,7 @@ analyze_agreement_huff <- function(stargazer_output = "text") {
     ha_hg_education_state_model,
     ha_hg_education_state_age_model,
     type = stargazer_output,
-    title = "Agreement with Fox News article (Heterogeity assumed)",
+    title = "Agreement with HuffPo article (Heterogeity assumed)",
     add.lines = list(
       c("Education FE?", "No", "Yes", "Yes", "Yes"),
       c("State FE?", "No", "No", "Yes", "Yes"),
@@ -563,7 +563,8 @@ analyze_credibility_huff <- function(stargazer_output = "text") {
     hc_party_treatment_hg_model,
     hc_party_treatment_hg_qo_model,
     type = stargazer_output,
-    title = "Agreement with Fox News article (Heterogeity unproven)"
+    title = "Credibility of HuffPo article (Heterogeity unproven)",
+    order = c(1, 2, 3, 5, 4)
   )
   
   hc_hg_treatment_model <- lm( 
@@ -596,7 +597,7 @@ analyze_credibility_huff <- function(stargazer_output = "text") {
     hc_hg_familiarity_model,
     hc_hg_familiarity_gender_model,
     type = stargazer_output,
-    title = "Agreement with Fox News article (Heterogeity assumed)",
+    title = "Credibility of HuffPo article (Heterogeity assumed)",
     order = c(1, 2, 8, 9, 3, 4, 5, 6, 7)
   )
   
@@ -637,7 +638,7 @@ analyze_credibility_huff <- function(stargazer_output = "text") {
     hc_hg_education_state_model,
     hc_hg_education_state_age_model,
     type = stargazer_output,
-    title = "Agreement with Fox News article (Heterogeity assumed)",
+    title = "Credibility of article (Heterogeity assumed)",
     add.lines = list(
       c("Education FE?", "No", "Yes", "Yes", "Yes"),
       c("State FE?", "No", "No", "Yes", "Yes"),
